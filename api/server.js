@@ -9,11 +9,16 @@ require('dotenv').config();
 
 const app = express();
 connectDB();
-
+const corsOptions = {
+    origin: 'http://localhost:3000', // Replace with the URL of your frontend application
+    credentials: true // Allow credentials (cookies, authorization headers, etc.)
+  };
+  
+app.use(cors(corsOptions));
 // Middleware
 app.use(express.json());
 app.use(cookieParser())
-app.use(cors("*"));
+
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));

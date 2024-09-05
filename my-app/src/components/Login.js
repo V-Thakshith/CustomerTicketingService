@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'; // Import useNavigate for redire
 import './Login.css';
 import { UserContext } from "../UserContext";
 import axios from 'axios'
+import api from '../api';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [showPopup, setShowPopup] = useState(false);
+    const [isAgent, setIsAgent] = useState(false);
     const {setUser}=useContext(UserContext)
 
     const [signupData, setSignupData] = useState({
@@ -45,10 +47,19 @@ const Login = () => {
         setErrorMessage('Password must be at least 6 characters long.');
         return;
     }
-    const {data}= await axios.post('http://localhost:5000/api/auth/login',{email,password})
-    navigate('/dashboard');
+    const {data}= await api.post('/auth/login',{email,password})
+    
     console.log(data.user,data.token)
+    sessionStorage.setItem('token', data.token);
     setUser(data.user)
+    if (isAgent && data.user.role==='Agent') {
+        navigate('/dashboardAgent');
+    } else if(!isAgent && data.user.role==='customer'){
+        navigate('/dashboard');
+    }
+    else{
+        alert("Auth Login Error")
+    }
 }
 catch(e){
     console.log(e)
@@ -65,7 +76,7 @@ catch(e){
             return;
         }
         console.log('Pre Sign Up Data:', signupData);
-        const {data}= await axios.post('http://localhost:5000/api/auth/register',signupData)
+        const {data}= await api.post('/auth/register',signupData)
         // Implement sign-up logic here
         console.log('Sign Up Data:', signupData,data);
         
@@ -116,6 +127,16 @@ catch(e){
                         required 
                     />
                 </div>
+ 
+                {/* Add the checkbox for agent role */}
+                <div className="input-group-inline">
+    <input
+        type="checkbox"
+        checked={isAgent}
+        onChange={() => setIsAgent(!isAgent)}
+    />
+    <label>I am an agent</label>
+</div>
 
                 <button type="submit" className="login-button">Login</button>
 

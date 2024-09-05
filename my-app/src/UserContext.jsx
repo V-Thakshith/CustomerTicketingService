@@ -1,23 +1,33 @@
+import api from './api';
+import { createContext, useState, useEffect } from 'react';
 
-import { createContext, useState,useEffect } from "react";
-import axios from "axios";
-export const UserContext=createContext({});
+export const UserContext = createContext({});
 
-export function UserContextProvider({children}){
-    const [user,setUser]=useState(null)
-    const [ready,setReady]=useState(false)
-    useEffect(()=>{
-        if(!user){
-            axios.get('http://localhost:5000/api/users/me').then(({data})=>{
-                setUser(data);
-                setReady(true)
-            })
-        }           
-      },[])
+export function UserContextProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState(null); // State for handling errors
 
-    return(
-        <UserContext.Provider value={{user,setUser,ready}}>
-            <div>{children}</div>
-        </UserContext.Provider>
-    )
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const { data } = await api.get('/users/me');
+        setUser(data);
+        
+      } catch (err) {
+        // Handle errors, e.g., redirect to login or show a message
+        setError(err.response?.data?.msg || 'An error occurred');
+      } finally {
+        setReady(true);
+      }
+    };
+
+    fetchUser();
+  }, []); // Dependency array is correct to ensure it runs only on mount
+
+  return (
+    <UserContext.Provider value={{ user, setUser, ready, error }}>
+      {children}
+    </UserContext.Provider>
+  );
 }

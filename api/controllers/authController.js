@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 // Register a new user (customer, agent, or manager)
 exports.registerUser = async (req, res) => {
   try {
-    const { fullName,signupEmail, signupPassword,gender,dob,country,role } = req.body;
+    const { fullName,signupEmail, signupPassword,dob,country,role } = req.body;
     console.log("in API")
     // Ensure role is valid
     if (!['customer', 'agent', 'manager'].includes(role)) {

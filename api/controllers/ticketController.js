@@ -51,7 +51,7 @@ exports.updateTicketStatus = async (req, res) => {
 // Create a new ticket and assign it to the least busy agent based on category
 exports.createTicket = async (req, res) => {
   try {
-    const { title, description, category, attachments } = req.body;
+    const { title, description, category, attachments,customerId } = req.body;
 
     // Validate input
     if (!title || !description || !category) {
@@ -65,6 +65,8 @@ exports.createTicket = async (req, res) => {
       category,
       status: 'Open',
       attachments,
+      customer:customerId,
+      createdAt:Date.now()
     });
 
     // Find the least busy agent for the given category
@@ -76,7 +78,7 @@ exports.createTicket = async (req, res) => {
     // Count the number of tickets assigned to each agent for the category
     const agentTicketCounts = await Promise.all(
       agents.map(async (agent) => {
-        const count = await Ticket.countDocuments({ assignedTo: agent._id, category });
+        const count = await Ticket.countDocuments({ assignedTo: agent._id });
         return { agent, count };
       })
     );
@@ -141,11 +143,50 @@ exports.getAssignedTickets = async (req, res) => {
 exports.getTicketsByCustomer = async (req, res) => {
   try {
     const customerId = req.params.customerId;
-    const tickets = await Ticket.find({ customer: customerId });
-    res.status(200).json(tickets);
+    
+    // Fetch tickets for the customer
+    const tickets = await Ticket.find({ customer: customerId }).populate('assignedTo');
+    
+    // Fetch and include agent details in each ticket
+    const ticketsWithAgentDetails = await Promise.all(
+      tickets.map(async (ticket) => {
+        const agentDetails = ticket.assignedTo ? await getAgentDetails(ticket.assignedTo) : null;
+        return {
+          ...ticket._doc,
+          agent: agentDetails
+        };
+      })
+    );
+    console.log(ticketsWithAgentDetails)
+    res.status(200).json(ticketsWithAgentDetails);
   } catch (error) {
     console.error('Error fetching tickets by customer:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
+const getAgentDetails = async (employeeId) => {
+  try {
+    const agent = await User.findById(employeeId);
+    if (!agent) {
+      throw new Error('Agent not found');
+    }
+    return {
+      name: agent.name,
+      email: agent.email
+    };
+  } catch (error) {
+    console.error('Error fetching agent details:', error);
+    throw new Error('Error fetching agent details');
+  }
+};
+
+exports.getAllTickets = async (req, res) => {
+  try {
+    const tickets = await Ticket.find().populate('customer assignedTo');  // Correct field names for population
+    res.json(tickets);
+  } catch (error) {
+    console.error('Error fetching tickets:', error);
+    res.status(500).json({ msg: 'Error fetching tickets', error: error.message });
+  }
+};

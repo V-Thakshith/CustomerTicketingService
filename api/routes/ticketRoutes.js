@@ -4,6 +4,9 @@ const ticketController = require('../controllers/ticketController');
 const authMiddleware = require('../middleware/authMiddleware');
 const roleMiddleware = require('../middleware/roleMiddleware');
 
+//adding /tickets to view tickets
+router.get('/tickets', ticketController.getAllTickets);
+
 router.post('/', authMiddleware, ticketController.createTicket);
 router.get('/:id', authMiddleware, ticketController.getTicket);
 router.put('/:id/status', authMiddleware, roleMiddleware(['Agent', 'Manager']), ticketController.updateTicketStatus);
