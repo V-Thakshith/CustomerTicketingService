@@ -1,17 +1,19 @@
-import React, { useState,useContext } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate for redirection
+import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { UserContext } from "../UserContext";
-import axios from 'axios'
 import api from '../api';
 
 const Login = () => {
+    
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [showPopup, setShowPopup] = useState(false);
     const [isAgent, setIsAgent] = useState(false);
-    const {setUser}=useContext(UserContext)
+    const { user, setUser } = useContext(UserContext);
+    setUser(null);
+    sessionStorage.clear();
 
     const [signupData, setSignupData] = useState({
         fullName: '',
@@ -21,70 +23,80 @@ const Login = () => {
         gender: '',
         dob: '',
         country: '',
-        role:'customer'
+        role: 'customer'
     });
 
-    const navigate = useNavigate(); // Initialize useNavigate
+    const navigate = useNavigate();
 
-    //const mockUser = {
-    //    email: 'testuser@example.com',
-    //    password: 'password123'
-    //};
-
-    const validateEmail = (email) => {
-        return /\S+@\S+\.\S+/.test(email);
-    };
+    const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);
 
     const handleLogin = async (e) => {
         e.preventDefault();
-    try{
-    
-    if (!validateEmail(email)) {
-        setErrorMessage('Please enter a valid email address.');
-        return;
-    }
-    if (password.length < 6) {
-        setErrorMessage('Password must be at least 6 characters long.');
-        return;
-    }
-    const {data}= await api.post('/auth/login',{email,password})
-    
-    console.log(data.user,data.token)
-    sessionStorage.setItem('token', data.token);
-    setUser(data.user)
-    if (isAgent && data.user.role==='Agent') {
-        navigate('/dashboardAgent');
-    } else if(!isAgent && data.user.role==='customer'){
-        navigate('/dashboard');
-    }
-    else{
-        alert("Auth Login Error")
-    }
-}
-catch(e){
-    console.log(e)
-    alert("Login Failed")
-}
+        try {
+            // Reset user context and session storage before login
+            
+
+            if (!validateEmail(email)) {
+                setErrorMessage('Please enter a valid email address.');
+                return;
+            }
+
+            const { data } = await api.post('/auth/login', { email, password });
+
+            console.log(data.user, data.token);
+            sessionStorage.setItem('token', data.token);
+            setUser(data.user);
+
+            if (isAgent && data.user.role === 'Agent') {
+                navigate('/dashboardAgent');
+            } else if (!isAgent && data.user.role === 'customer') {
+                navigate('/dashboard');
+            } else {
+                alert("Auth Login Error");
+            }
+        } catch (e) {
+            console.log(e);
+            alert("Login Failed");
+        }
     };
 
     const handleSignUp = async (e) => {
         e.preventDefault();
-        try{
-            
-        if (signupData.signupPassword !== signupData.confirmPassword) {
-            setErrorMessage('Passwords do not match.');
-            return;
-        }
-        console.log('Pre Sign Up Data:', signupData);
-        const {data}= await api.post('/auth/register',signupData)
-        // Implement sign-up logic here
-        console.log('Sign Up Data:', signupData,data);
-        
-        alert('Sign-up successful!');
-        setShowPopup(false); // Close the pop-up after sign-up
-        }
-        catch(e){
-            alert("Something went wrong")
+        try {
+            const validatePassword = (pwd) => {
+                if (pwd.length < 8) return 'Password must be at least 8 characters long';
+                if (!/[A-Z]/.test(pwd)) return 'Password must contain at least one uppercase letter';
+                if (!/[a-z]/.test(pwd)) return 'Password must contain at least one lowercase letter';
+                if (!/[0-9]/.test(pwd)) return 'Password must contain at least one number';
+                if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) return 'Password must contain at least one special character';
+                return '';
+            };
+
+            if (!validateEmail(signupData.signupEmail)) {
+                setErrorMessage('Please enter a valid email address.');
+                return;
+            }
+
+            const passwordError = validatePassword(signupData.signupPassword);
+            if (passwordError) {
+                setErrorMessage(passwordError);
+                return;
+            }
+
+            if (signupData.signupPassword !== signupData.confirmPassword) {
+                setErrorMessage('Passwords do not match.');
+                return;
+            }
+
+            console.log('Pre Sign Up Data:', signupData);
+            const { data } = await api.post('/auth/register', signupData);
+            console.log('Sign Up Data:', signupData, data);
+
+            alert('Sign-up successful!');
+            setShowPopup(false); // Close the pop-up after sign-up
+        } catch (e) {
+            console.log(e);
+            alert("Something went wrong");
         }
     };
 
@@ -109,34 +121,33 @@ catch(e){
 
                 <div className="input-group">
                     <label htmlFor="email">Email Address</label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        value={email} 
-                        onChange={(e) => setEmail(e.target.value)} 
-                        required 
+                    <input
+                        type="email"
+                        id="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
                     />
                 </div>
                 <div className="input-group">
                     <label htmlFor="password">Password</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        value={password} 
-                        onChange={(e) => setPassword(e.target.value)} 
-                        required 
+                    <input
+                        type="password"
+                        id="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
                     />
                 </div>
- 
-                {/* Add the checkbox for agent role */}
+
                 <div className="input-group-inline">
-    <input
-        type="checkbox"
-        checked={isAgent}
-        onChange={() => setIsAgent(!isAgent)}
-    />
-    <label>I am an agent</label>
-</div>
+                    <input
+                        type="checkbox"
+                        checked={isAgent}
+                        onChange={() => setIsAgent(!isAgent)}
+                    />
+                    <label>I am an agent</label>
+                </div>
 
                 <button type="submit" className="login-button">Login</button>
 
@@ -158,55 +169,55 @@ catch(e){
                         <form onSubmit={handleSignUp}>
                             <div className="input-group">
                                 <label htmlFor="fullName">Full Name</label>
-                                <input 
-                                    type="text" 
-                                    id="fullName" 
+                                <input
+                                    type="text"
+                                    id="fullName"
                                     name="fullName"
-                                    value={signupData.fullName} 
-                                    onChange={handleChange} 
-                                    required 
+                                    value={signupData.fullName}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </div>
                             <div className="input-group">
                                 <label htmlFor="signupEmail">Email Address</label>
-                                <input 
-                                    type="email" 
-                                    id="signupEmail" 
+                                <input
+                                    type="email"
+                                    id="signupEmail"
                                     name="signupEmail"
-                                    value={signupData.signupEmail} 
-                                    onChange={handleChange} 
-                                    required 
+                                    value={signupData.signupEmail}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </div>
                             <div className="input-group">
                                 <label htmlFor="signupPassword">Password</label>
-                                <input 
-                                    type="password" 
-                                    id="signupPassword" 
+                                <input
+                                    type="password"
+                                    id="signupPassword"
                                     name="signupPassword"
-                                    value={signupData.signupPassword} 
-                                    onChange={handleChange} 
-                                    required 
+                                    value={signupData.signupPassword}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </div>
                             <div className="input-group">
                                 <label htmlFor="confirmPassword">Confirm Password</label>
-                                <input 
-                                    type="password" 
-                                    id="confirmPassword" 
+                                <input
+                                    type="password"
+                                    id="confirmPassword"
                                     name="confirmPassword"
-                                    value={signupData.confirmPassword} 
-                                    onChange={handleChange} 
-                                    required 
+                                    value={signupData.confirmPassword}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </div>
                             <div className="input-group">
                                 <label htmlFor="gender">Gender</label>
-                                <select 
-                                    id="gender" 
+                                <select
+                                    id="gender"
                                     name="gender"
-                                    value={signupData.gender} 
-                                    onChange={handleChange} 
+                                    value={signupData.gender}
+                                    onChange={handleChange}
                                     required
                                 >
                                     <option value="">Select Gender</option>
@@ -216,24 +227,24 @@ catch(e){
                             </div>
                             <div className="input-group">
                                 <label htmlFor="dob">Date of Birth</label>
-                                <input 
-                                    type="date" 
-                                    id="dob" 
+                                <input
+                                    type="date"
+                                    id="dob"
                                     name="dob"
-                                    value={signupData.dob} 
-                                    onChange={handleChange} 
-                                    required 
+                                    value={signupData.dob}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </div>
                             <div className="input-group">
                                 <label htmlFor="country">Country</label>
-                                <input 
-                                    type="text" 
-                                    id="country" 
+                                <input
+                                    type="text"
+                                    id="country"
                                     name="country"
-                                    value={signupData.country} 
-                                    onChange={handleChange} 
-                                    required 
+                                    value={signupData.country}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </div>
 

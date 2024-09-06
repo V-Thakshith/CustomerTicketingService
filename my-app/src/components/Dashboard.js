@@ -10,6 +10,8 @@ const Dashboard = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isPopupOpen, setIsPopupOpen] = useState(false); // State to control pop-up visibility
+    const [formData, setFormData] = useState({ subject: '', description: '', photo: null }); // Form data
     const { user, ready } = useContext(UserContext);
     const navigate = useNavigate();
 
@@ -18,7 +20,7 @@ const Dashboard = () => {
             if (!ready) return;
 
             if (!user) {
-                navigate('/login');
+                navigate('/');
                 return;
             }
 
@@ -41,20 +43,56 @@ const Dashboard = () => {
     }, [ready, user, navigate]);
 
     const handleSearchChange = (e) => {
-        setSearchQuery(e.target.value);
+        setSearchQuery(e.target.value || ''); // Ensure searchQuery is always a string
     };
 
     const handleStatusChange = (e) => {
-        setStatusFilter(e.target.value);
+        setStatusFilter(e.target.value || ''); // Ensure statusFilter is always a string
     };
 
-    const filteredTickets = tickets.filter(ticket =>
-        (statusFilter === '' || ticket.status === statusFilter) &&
-        ticket.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredTickets = tickets.filter(ticket => {
+        // Safeguard against undefined values
+        const ticketTitle = ticket.title || '';
+        const ticketStatus = ticket.status || '';
+        
+        return (
+            (statusFilter === '' || ticketStatus === statusFilter) &&
+            ticketTitle.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    });
 
     if (loading) return <div>Loading...</div>;
     if (error) return <div>{error}</div>;
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        console.log('Form Data:', formData); // Implement API call to submit form data
+         await api.post('/tickets', {title:formData.subject,description:formData.description,attachments:[],customerId:user._id,category:formData.category});
+        closePopup();
+    };
+
+    const handleInputChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleFileChange = (e) => {
+        setFormData({ ...formData, photo: e.target.files[0] });
+    };
+
+    const openPopup = () => {
+        setIsPopupOpen(true);
+    };
+
+    const closePopup = () => {
+        setIsPopupOpen(false);
+    };
+
+    const handleLogout = () => {
+        // Clear authentication-related data
+        sessionStorage.clear(); // Adjust as needed
+        // Redirect to login page
+        navigate('/');
+    };
 
     return (
         <div className="dashboard-container">
@@ -69,6 +107,7 @@ const Dashboard = () => {
                 <div className="profile-photo">
                     <img src="profile-photo-url" alt="Profile" />
                 </div>
+                <button className="logout-button" onClick={handleLogout}>Logout</button>
             </header>
 
             <main className="main-content">
@@ -80,36 +119,38 @@ const Dashboard = () => {
                         value={searchQuery}
                         onChange={handleSearchChange}
                     />
-                    <select
-                        className="status-filter"
-                        value={statusFilter}
-                        onChange={handleStatusChange}
-                    >
-                        <option value="">All Statuses</option>
-                        <option value="Open">Open</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Resolved">Resolved</option>
+                    <select className="status-filter" value={statusFilter} onChange={handleStatusChange}>
+                        <option value="">All Status</option>
+                        <option value="To-Do">To-Do</option>
+                        <option value="In-Progress">In-Progress</option>
                         <option value="Closed">Closed</option>
                     </select>
-                    <button className="raise-ticket-button">Raise Ticket</button>
+                    <button className="raise-ticket-button" onClick={openPopup}>
+                        Raise Ticket
+                    </button>
                 </div>
+
                 <table className="info-table">
                     <thead>
                         <tr>
                             <th>Ticket No.</th>
-                            <th>Title</th>
+                            <th>Subject</th>
                             <th>Status</th>
+                            <th>Agent Name</th>
+                            <th>Agent Email</th>
                             <th>Date</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredTickets.length > 0 ? (
                             filteredTickets.map(ticket => (
-                                <tr key={ticket._id}>
+                                <tr key={ticket.ticketNo}>
                                     <td>{ticket._id}</td>
                                     <td>{ticket.title}</td>
                                     <td>{ticket.status}</td>
-                                    <td>{new Date(ticket.createdAt).toLocaleDateString()}</td>
+                                    <td>{ticket.agent.name}</td>
+                                    <td>{ticket.agent.email}</td>
+                                    <td>{ticket.createdAt}</td>
                                 </tr>
                             ))
                         ) : (
@@ -120,6 +161,65 @@ const Dashboard = () => {
                     </tbody>
                 </table>
             </main>
+
+            {/* Pop-up for Raise Ticket */}
+            {isPopupOpen && (
+      <div className="popup-overlay">
+        <div className="popup-content">
+          <h2>Raise a Ticket</h2>
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="subject">Subject</label>
+            <input
+              type="text"
+              id="subject"
+              name="subject"
+              value={formData.subject}
+              onChange={handleInputChange}
+              required
+            />
+
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              rows="4"
+              value={formData.description}
+              onChange={handleInputChange}
+              required
+            ></textarea>
+
+            <label htmlFor="category">Category</label>
+            <select
+              id="category"
+              name="category"
+              value={formData.category}
+              onChange={handleInputChange}
+              required
+            >
+              <option value="Technical">Technical</option>
+              <option value="Billing">Billing</option>
+              <option value="General">General</option>
+              <option value="Product">Product</option>
+            </select>
+
+            <label htmlFor="photo">Upload Photo</label>
+            <input
+              type="file"
+              id="photo"
+              name="photo"
+              accept="image/*"
+              onChange={handleFileChange}
+            />
+
+            <div className="popup-actions">
+              <button type="submit">Submit</button>
+              <button type="button" onClick={closePopup}>Close</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
         </div>
     );
 };

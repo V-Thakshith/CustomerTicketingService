@@ -57,7 +57,14 @@ exports.createTicket = async (req, res) => {
     if (!title || !description || !category) {
       return res.status(400).json({ msg: 'Missing required fields' });
     }
+    const now = new Date(); // Create a Date object with the current time
 
+// Format the date in a readable format (e.g., "September 5, 2024")
+const readableDate = now.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+});
     // Create the ticket
     const newTicket = new Ticket({
       title,
@@ -66,7 +73,7 @@ exports.createTicket = async (req, res) => {
       status: 'Open',
       attachments,
       customer:customerId,
-      createdAt:Date.now()
+      createdAt:readableDate
     });
 
     // Find the least busy agent for the given category
@@ -133,12 +140,27 @@ exports.assignTicket = async (req, res) => {
 // Get all tickets assigned to the authenticated agent
 exports.getAssignedTickets = async (req, res) => {
   try {
-    const tickets = await Ticket.find({ assignedTo: req.user._id });
-    res.json(tickets);
+    const { agentId } = req.params;
+
+    // Fetch tickets assigned to the agent and populate customer details
+    const tickets = await Ticket.find({ assignedTo: agentId })
+                               .populate('customer', 'name email') // Populate customer details
+                               .exec();
+
+    // Map the tickets to include customer details in the response
+    const result = tickets.map(ticket => ({
+      ...ticket._doc, // Include all ticket fields
+      customerName: ticket.customer ? ticket.customer.name : 'N/A',
+      customerEmail: ticket.customer ? ticket.customer.email : 'N/A'
+    }));
+
+    res.json(result);
   } catch (error) {
     res.status(500).json({ msg: 'Server error', error });
   }
 };
+
+
 
 exports.getTicketsByCustomer = async (req, res) => {
   try {
