@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios'; // Make sure axios is imported
 import './Dashboard.css';
 import api from '../api'; // Ensure this is correctly configured for your API
 import { UserContext } from "../UserContext";
@@ -11,7 +12,12 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
-    const [formData, setFormData] = useState({ subject: '', description: '', category: '', photo: [] }); // Updated formData
+    const [formData, setFormData] = useState({
+        subject: '',
+        description: '',
+        category: '',
+        photo: []
+    }); // Updated formData
     const { user, ready } = useContext(UserContext);
     const navigate = useNavigate();
 
@@ -63,21 +69,38 @@ const Dashboard = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (!formData.category) {
             alert('Please select a category.');
             return;
         }
+
+        const uploadData = new FormData();
+        uploadData.append('title', formData.subject);
+        uploadData.append('description', formData.description);
+        uploadData.append('customerId', user._id);
+        uploadData.append('category', formData.category);
+
+        // Append files to FormData
+        for (let i = 0; i < formData.photo.length; i++) {
+            uploadData.append('attachments', formData.photo[i]);
+        }
+        console.log(uploadData)
+        setLoading(true);
+        setError(null);
+
         try {
-            await api.post('/tickets', {
-                title: formData.subject,
-                description: formData.description,
-                attachments: formData.photo,
-                customerId: user._id,
-                category: formData.category
+            await api.post('/tickets', uploadData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
             });
             closePopup();
         } catch (error) {
             console.error('Error submitting ticket:', error);
+            setError('Failed to create ticket.');
+        } finally {
+            setLoading(false);
         }
     };
 
