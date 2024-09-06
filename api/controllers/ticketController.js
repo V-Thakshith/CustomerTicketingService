@@ -19,6 +19,7 @@ const notifyCustomer = async (ticketId, message) => {
     //}
     
     // Send Email
+    console.log(customer.email, message)
     if (customer.email) {
       await sendEmail(customer.email, 'Ticket Update', message);
     }
@@ -32,7 +33,7 @@ exports.updateTicketStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-
+    console.log(status)
     // Update ticket status
     const ticket = await Ticket.findByIdAndUpdate(id, { status }, { new: true });
     if (!ticket) return res.status(404).json({ msg: 'Ticket not found' });
@@ -139,6 +140,7 @@ exports.getTicket = async (req, res) => {
 };
 
 // Update the status of a ticket
+
 
 // Assign a ticket to a support agent
 exports.assignTicket = async (req, res) => {
