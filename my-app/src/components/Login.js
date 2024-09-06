@@ -47,7 +47,7 @@ const Login = () => {
             sessionStorage.setItem('token', data.token);
             setUser(data.user);
 
-            if (isAgent && data.user.role === 'Agent') {
+            if (isAgent && data.user.role === 'agent') {
                 navigate('/dashboardAgent');
             } else if (!isAgent && data.user.role === 'customer') {
                 navigate('/dashboard');

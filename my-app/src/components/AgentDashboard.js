@@ -7,19 +7,29 @@ import { UserContext } from "../UserContext";
 // Main Dashboard Component
 const AgentDashboard = () => {
   const [tickets, setTickets] = useState([]);
-  const [selectedPriority, setSelectedPriority] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { user, setUser, ready } = useContext(UserContext);
+  const { user, ready } = useContext(UserContext);
   const navigate = useNavigate();
 
-  const priorities = ['All', 'High', 'Medium', 'Low'];
+  // Define category order
+  const categoryOrder = {
+    'Technical': 1,
+    'Billing': 2,
+    'General': 3,
+    'Product': 4,
+    'All': 5
+  };
+
+  // Define categories
+  const categories = ['All', 'Technical', 'Billing', 'General', 'Product'];
 
   useEffect(() => {
-    // Fetch tickets and sort them by priority
+    // Fetch tickets and sort them by category
     if (!ready) return;
 
     if (!user) {
@@ -33,8 +43,8 @@ const AgentDashboard = () => {
       try {
         const response = await api.get(`/tickets/assigned/${user._id}`); // Adjust endpoint as needed
         const sortedTickets = response.data.sort((a, b) => {
-          const priorityOrder = { 'High': 1, 'Medium': 2, 'Low': 3, 'All': 4 };
-          return priorityOrder[a.priority] - priorityOrder[b.priority];
+          if (a.category === b.category) return 0;
+          return (categoryOrder[a.category] || 999) - (categoryOrder[b.category] || 999);
         });
         setTickets(sortedTickets);
       } catch (error) {
@@ -48,8 +58,8 @@ const AgentDashboard = () => {
     fetchTickets();
   }, [user, ready, navigate]);
 
-  const handlePriorityChange = (e) => {
-    setSelectedPriority(e.target.value);
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value);
   };
 
   const handleSearchChange = (e) => {
@@ -57,10 +67,10 @@ const AgentDashboard = () => {
   };
 
   const filteredTickets = tickets.filter(ticket => {
-    const matchesPriority = selectedPriority === 'All' || ticket.priority === selectedPriority;
+    const matchesCategory = selectedCategory === 'All' || ticket.category === selectedCategory;
     const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesPriority && matchesSearch;
+    return matchesCategory && matchesSearch;
   });
 
   if (loading) return <p>Loading...</p>;
@@ -121,17 +131,17 @@ const AgentDashboard = () => {
           </div>
         </div>
 
-        {/* Priority Dropdown */}
+        {/* Category Dropdown */}
         <div className="dropdown-container">
-          <label htmlFor="priority-select">Filter by Priority:</label>
+          <label htmlFor="category-select">Filter by Category:</label>
           <select
-            id="priority-select"
-            value={selectedPriority}
-            onChange={handlePriorityChange}
-            className="priority-dropdown"
+            id="category-select"
+            value={selectedCategory}
+            onChange={handleCategoryChange}
+            className="category-dropdown"
           >
-            {priorities.map(priority => (
-              <option key={priority} value={priority}>{priority}</option>
+            {categories.map(category => (
+              <option key={category} value={category}>{category}</option>
             ))}
           </select>
         </div>
@@ -148,24 +158,30 @@ const AgentDashboard = () => {
                   <th scope="col">Ticket Number</th>
                   <th scope="col">Customer Name</th>
                   <th scope="col">Subject</th>
-                  <th scope="col">Priority</th>
+                  <th scope="col">Category</th>
                   <th scope="col">Status</th>
                   <th scope="col">Date Created</th>
                   <th scope="col">View Ticket</th> {/* New column */}
                 </tr>
               </thead>
               <tbody>
-                {filteredTickets.map(ticket => (
-                  <tr key={ticket._id}>
-                    <td>{ticket._id}</td>
-                    <td>{ticket.customer.name}</td>
-                    <td>{ticket.title}</td>
-                    <td>{ticket.priority}</td>
-                    <td>{ticket.status}</td>
-                    <td>{ticket.createdAt}</td>
-                    <td><a href={`#ticket-${ticket._id}`} className="view-link">View</a></td> {/* New view link */}
+                {filteredTickets.length > 0 ? (
+                  filteredTickets.map(ticket => (
+                    <tr key={ticket._id}>
+                      <td>{ticket._id}</td>
+                      <td>{ticket.customer.name}</td>
+                      <td>{ticket.title}</td>
+                      <td>{ticket.category}</td>
+                      <td>{ticket.status}</td>
+                      <td>{ticket.createdAt}</td>
+                      <td><a href={`#ticket-${ticket._id}`} className="view-link">View</a></td> {/* New view link */}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7">No tickets available</td> {/* Handle no tickets case */}
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

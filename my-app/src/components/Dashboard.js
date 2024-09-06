@@ -10,8 +10,8 @@ const Dashboard = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isPopupOpen, setIsPopupOpen] = useState(false); // State to control pop-up visibility
-    const [formData, setFormData] = useState({ subject: '', description: '', photo: null }); // Form data
+    const [isPopupOpen, setIsPopupOpen] = useState(false);
+    const [formData, setFormData] = useState({ subject: '', description: '', category: '', photo: [] }); // Updated formData
     const { user, ready } = useContext(UserContext);
     const navigate = useNavigate();
 
@@ -29,10 +29,8 @@ const Dashboard = () => {
 
             try {
                 const response = await api.get(`/tickets/customer/${user._id}`);
-                console.log('Tickets fetched:', response.data);
                 setTickets(response.data);
             } catch (error) {
-                console.error('Error fetching tickets:', error);
                 setError('Error fetching tickets.');
             } finally {
                 setLoading(false);
@@ -43,15 +41,14 @@ const Dashboard = () => {
     }, [ready, user, navigate]);
 
     const handleSearchChange = (e) => {
-        setSearchQuery(e.target.value || ''); // Ensure searchQuery is always a string
+        setSearchQuery(e.target.value || '');
     };
 
     const handleStatusChange = (e) => {
-        setStatusFilter(e.target.value || ''); // Ensure statusFilter is always a string
+        setStatusFilter(e.target.value || '');
     };
 
     const filteredTickets = tickets.filter(ticket => {
-        // Safeguard against undefined values
         const ticketTitle = ticket.title || '';
         const ticketStatus = ticket.status || '';
         
@@ -66,9 +63,22 @@ const Dashboard = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Form Data:', formData); // Implement API call to submit form data
-         await api.post('/tickets', {title:formData.subject,description:formData.description,attachments:[],customerId:user._id,category:formData.category});
-        closePopup();
+        if (!formData.category) {
+            alert('Please select a category.');
+            return;
+        }
+        try {
+            await api.post('/tickets', {
+                title: formData.subject,
+                description: formData.description,
+                attachments: formData.photo,
+                customerId: user._id,
+                category: formData.category
+            });
+            closePopup();
+        } catch (error) {
+            console.error('Error submitting ticket:', error);
+        }
     };
 
     const handleInputChange = (e) => {
@@ -76,7 +86,9 @@ const Dashboard = () => {
     };
 
     const handleFileChange = (e) => {
-        setFormData({ ...formData, photo: e.target.files[0] });
+        const files = e.target.files;
+        const fileArray = Array.from(files);
+        setFormData({ ...formData, photo: fileArray });
     };
 
     const openPopup = () => {
@@ -88,9 +100,7 @@ const Dashboard = () => {
     };
 
     const handleLogout = () => {
-        // Clear authentication-related data
-        sessionStorage.clear(); // Adjust as needed
-        // Redirect to login page
+        sessionStorage.clear();
         navigate('/');
     };
 
@@ -155,7 +165,7 @@ const Dashboard = () => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="4">No tickets found.</td>
+                                <td colSpan="6">No tickets found.</td>
                             </tr>
                         )}
                     </tbody>
@@ -164,62 +174,63 @@ const Dashboard = () => {
 
             {/* Pop-up for Raise Ticket */}
             {isPopupOpen && (
-      <div className="popup-overlay">
-        <div className="popup-content">
-          <h2>Raise a Ticket</h2>
-          <form onSubmit={handleSubmit}>
-            <label htmlFor="subject">Subject</label>
-            <input
-              type="text"
-              id="subject"
-              name="subject"
-              value={formData.subject}
-              onChange={handleInputChange}
-              required
-            />
+                <div className="popup-overlay">
+                    <div className="popup-content">
+                        <h2>Raise a Ticket</h2>
+                        <form onSubmit={handleSubmit}>
+                            <label htmlFor="subject">Subject</label>
+                            <input
+                                type="text"
+                                id="subject"
+                                name="subject"
+                                value={formData.subject}
+                                onChange={handleInputChange}
+                                required
+                            />
 
-            <label htmlFor="description">Description</label>
-            <textarea
-              id="description"
-              name="description"
-              rows="4"
-              value={formData.description}
-              onChange={handleInputChange}
-              required
-            ></textarea>
+                            <label htmlFor="description">Description</label>
+                            <textarea
+                                id="description"
+                                name="description"
+                                rows="4"
+                                value={formData.description}
+                                onChange={handleInputChange}
+                                required
+                            ></textarea>
 
-            <label htmlFor="category">Category</label>
-            <select
-              id="category"
-              name="category"
-              value={formData.category}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="Technical">Technical</option>
-              <option value="Billing">Billing</option>
-              <option value="General">General</option>
-              <option value="Product">Product</option>
-            </select>
+                            <label htmlFor="category">Category</label>
+                            <select
+                                id="category"
+                                name="category"
+                                value={formData.category}
+                                onChange={handleInputChange}
+                                required
+                            >
+                                <option value="">Select Category</option>
+                                <option value="Technical">Technical</option>
+                                <option value="Billing">Billing</option>
+                                <option value="General">General</option>
+                                <option value="Product">Product</option>
+                            </select>
 
-            <label htmlFor="photo">Upload Photo</label>
-            <input
-              type="file"
-              id="photo"
-              name="photo"
-              accept="image/*"
-              onChange={handleFileChange}
-            />
+                            <label htmlFor="photo">Upload Photos</label>
+                            <input
+                                type="file"
+                                id="photo"
+                                name="photo"
+                                accept="image/*"
+                                multiple
+                                onChange={handleFileChange}
+                            />
 
-            <div className="popup-actions">
-              <button type="submit">Submit</button>
-              <button type="button" onClick={closePopup}>Close</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )
-  }
+                            <div className="popup-actions">
+                                <button type="submit">Submit</button>
+                                <button type="button" onClick={closePopup}>Close</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
