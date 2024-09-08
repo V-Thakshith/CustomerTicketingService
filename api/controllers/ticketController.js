@@ -48,6 +48,26 @@ exports.updateTicketStatus = async (req, res) => {
   }
 };
 
+exports.updateTicketStatusToResolved = async (req, res) => {
+  try {
+    const { id } = req.params; // Get ticket ID from the request parameters
+ 
+    // Directly set the status to 'Resolved'
+    const status = 'Resolved';
+ 
+    // Update the ticket status in the database
+    const ticket = await Ticket.findByIdAndUpdate(id, { status }, { new: true });
+    if (!ticket) return res.status(404).json({ msg: 'Ticket not found' });
+ 
+    // Notify the customer about the status change
+    const message = `Your ticket with ID ${id} has been updated to Resolved.`;
+    await notifyCustomer(id, message);
+ 
+    res.status(200).json({ msg: 'Ticket status updated to Resolved', ticket });
+  } catch (error) {
+    res.status(500).json({ msg: 'Server error', error });
+  }
+};
 
 // Create a new ticket and assign it to the least busy agent based on category
 // Create a new ticket and assign it to the least busy agent

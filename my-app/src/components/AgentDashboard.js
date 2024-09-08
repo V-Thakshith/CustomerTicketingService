@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './AgentDashboard.css';
 import api from '../api'; // Ensure this is correctly configured for your API
 import { UserContext } from "../UserContext";
+import TicketModal from './TicketModal';
 
 // Main Dashboard Component
 const AgentDashboard = () => {
@@ -12,6 +13,8 @@ const AgentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTicket, setSelectedTicket] = useState(null); // New state for selected ticket
+  const [showModal, setShowModal] = useState(false); // State to control the modal
 
   const { user, ready } = useContext(UserContext);
   const navigate = useNavigate();
@@ -66,6 +69,26 @@ const AgentDashboard = () => {
     setSearchTerm(e.target.value);
   };
 
+  const handleViewTicket = (ticket) => {
+    setSelectedTicket(ticket); // Set the selected ticket
+    setShowModal(true); // Show the modal
+  };
+ 
+  const handleCloseModal = () => {
+    setShowModal(false); // Close the modal
+    setSelectedTicket(null); // Reset selected ticket
+  };
+ 
+  const handleTicketAction = (action) => {
+    console.log(`Ticket action: ${action}`); // Implement your logic for ticket actions here
+    handleCloseModal(); // Close the modal after action
+  };
+ 
+  const handleLogout = () => {
+    sessionStorage.clear();
+    navigate('/');
+};
+
   const filteredTickets = tickets.filter(ticket => {
     const matchesCategory = selectedCategory === 'All' || ticket.category === selectedCategory;
     const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -102,18 +125,7 @@ const AgentDashboard = () => {
         <div className="header">
           <h4>Agent Home Page</h4>
           <div className="btn-toolbar">
-            <button
-              type="button"
-              className="profile-button"
-              onClick={() => setShowDropdown(!showDropdown)}
-            >
-              Agent Profile
-            </button>
-            {showDropdown && (
-              <div className="dropdown-menu">
-                <a href="#sign-out" className="dropdown-item">Sign Out</a>
-              </div>
-            )}
+          <button className="logout-button" onClick={handleLogout}>Logout</button>
           </div>
         </div>
 
@@ -161,7 +173,7 @@ const AgentDashboard = () => {
                   <th scope="col">Category</th>
                   <th scope="col">Status</th>
                   <th scope="col">Date Created</th>
-                  <th scope="col">View Ticket</th> {/* New column */}
+                  <th scope="col" >View Ticket</th> {/* New column */}
                 </tr>
               </thead>
               <tbody>
@@ -174,7 +186,7 @@ const AgentDashboard = () => {
                       <td>{ticket.category}</td>
                       <td>{ticket.status}</td>
                       <td>{ticket.createdAt}</td>
-                      <td><a href={`#ticket-${ticket._id}`} className="view-link">View</a></td> {/* New view link */}
+                      <td><button className="view-link" onClick={() => handleViewTicket(ticket)}>View</button></td> {/* New view link */}
                     </tr>
                   ))
                 ) : (
@@ -196,6 +208,13 @@ const AgentDashboard = () => {
             <p>No reports available</p>
           </div>
         </div>
+        {showModal && (
+          <TicketModal
+            ticket={selectedTicket}
+            onClose={handleCloseModal}
+            onAction={handleTicketAction}
+          />
+        )}
       </main>
     </div>
   );
