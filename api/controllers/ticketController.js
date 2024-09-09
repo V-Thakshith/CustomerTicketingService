@@ -28,17 +28,15 @@ const notifyCustomer = async (ticketId, message) => {
   }
 };
 
-// Example: Update ticket status and notify customer
+//Update ticket status and notify customer
 exports.updateTicketStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
     console.log(status)
-    // Update ticket status
     const ticket = await Ticket.findByIdAndUpdate(id, { status }, { new: true });
     if (!ticket) return res.status(404).json({ msg: 'Ticket not found' });
 
-    // Notify customer
     const message = `Your ticket with ID ${id} has been updated to ${status}.`;
     await notifyCustomer(id, message);
 
@@ -50,16 +48,12 @@ exports.updateTicketStatus = async (req, res) => {
 
 exports.updateTicketStatusToResolved = async (req, res) => {
   try {
-    const { id } = req.params; // Get ticket ID from the request parameters
- 
-    // Directly set the status to 'Resolved'
+    const { id } = req.params; 
     const status = 'Resolved';
- 
-    // Update the ticket status in the database
+
     const ticket = await Ticket.findByIdAndUpdate(id, { status }, { new: true });
     if (!ticket) return res.status(404).json({ msg: 'Ticket not found' });
- 
-    // Notify the customer about the status change
+
     const message = `Your ticket with ID ${id} has been updated to Resolved.`;
     await notifyCustomer(id, message);
  
@@ -69,11 +63,10 @@ exports.updateTicketStatusToResolved = async (req, res) => {
   }
 };
 
-// Create a new ticket and assign it to the least busy agent based on category
-// Create a new ticket and assign it to the least busy agent
+
 exports.createTicket = async (req, res) => {
     try {
-      const { title, description, customerId } = req.body;
+      const { title, description, customerId,category } = req.body;
       const attachments = req.files ? req.files.map(file => file.path.replace('uploads/', '')) : [];
   
       // Validate input
@@ -81,9 +74,7 @@ exports.createTicket = async (req, res) => {
         return res.status(400).json({ msg: 'Missing required fields' });
       }
   
-      const now = new Date(); // Create a Date object with the current time
-  
-      // Format the date in a readable format (e.g., "September 5, 2024")
+      const now = new Date(); 
       const readableDate = now.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -97,7 +88,8 @@ exports.createTicket = async (req, res) => {
         status: 'Open',
         attachments,
         customer: customerId,
-        createdAt: readableDate
+        createdAt: readableDate,
+        category:category
       });
   
       // Find all agents

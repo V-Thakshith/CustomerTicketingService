@@ -53,12 +53,26 @@ const TicketModal = ({ ticket, onClose, onAction }) => {
           <p><strong>Status:</strong> {ticket.status}</p>
           <p><strong>Description:</strong> {ticket.description}</p>
           <p><strong>Date Created:</strong> {ticket.createdAt}</p>
+          
+          {/* Attachments Section */}
+          {ticket.attachments && ticket.attachments.length > 0 && (
+            <div className="attachments-section">
+              <h6>Attachments:</h6>
+              <div className="attachments-list">
+      {ticket.attachments.map((attachment, index) => (
+        <div key={index} className="attachment-item">
+          <img src={`http://localhost:5000/${attachment}`} alt={`Attachment ${index + 1}`} className="attachment-image" />
+        </div>
+      ))}
+    </div>
+            </div>
+          )}
         </div>
         <div className="modal-footer">
           <button className="action-button" onClick={handleMarkAsResolved}>
             Mark as Resolved
           </button>
-         
+          
           {/* Add margin class to the select element */}
           <select className="status-select" value={selectedStatus} onChange={handleStatusChange}>
             <option value="Open">Open</option>
@@ -66,7 +80,7 @@ const TicketModal = ({ ticket, onClose, onAction }) => {
             <option value="Resolved">Resolved</option>
             <option value="Closed">Closed</option>
           </select>
- 
+  
           <button className="action-button" onClick={handleChangeStatus}>
             Change Status
           </button>
@@ -74,6 +88,7 @@ const TicketModal = ({ ticket, onClose, onAction }) => {
       </div>
     </div>
   );
+  
 };
  
 export default TicketModal;
