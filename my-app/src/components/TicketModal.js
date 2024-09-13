@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import './TicketModal.css';
 import api from '../api'; //for connecting with the api
  
 const TicketModal = ({ ticket, onClose, onAction }) => {
   const [selectedStatus, setSelectedStatus] = useState(ticket?.status || 'Open'); // Set initial status from the ticket
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
  
   if (!ticket) return null; // Return nothing if no ticket is selected
  
@@ -23,20 +21,35 @@ const TicketModal = ({ ticket, onClose, onAction }) => {
     }
   };
  
- 
- 
- 
   const handleChangeStatus = async () => {
     try {
       console.log(`Sending PUT request to /tickets/${ticket._id}/status`); // Log the URL
-      await api.put(`/tickets/tickets/${ticket._id}/status`, { status: selectedStatus });
-      onAction(selectedStatus); // Trigger the onAction callback with the selected status
-      onClose(); // Close the modal after successful status change
+      
+      // Sending the PUT request to update the ticket status
+      const response = await api.put(`/tickets/tickets/${ticket._id}/status`, { status: selectedStatus });
+  
+      // Check if the response is successful
+      if (response.status === 200) {
+        // Call onAction and onClose only if the status update is successful
+        onAction(selectedStatus);
+        onClose();
+      } else {
+        // Handle other status codes or errors that might not be caught by the catch block
+        throw new Error('Unexpected response from server.');
+      }
     } catch (error) {
+      // Check if error response is available and contains a message
+      if (error.response && error.response.data && error.response.data.msg) {
+        // Display the error message from the backend
+        alert(`Error: ${error.response.data.msg}`);
+      } else {
+        // Display a generic error message
+        alert('Error changing ticket status. Please try again later.');
+      }
+      
       console.error('Error changing ticket status:', error);
     }
-  };  
- 
+  };
  
   return (
     <div className="modal-overlay">
@@ -49,10 +62,13 @@ const TicketModal = ({ ticket, onClose, onAction }) => {
           <p><strong>Ticket ID:</strong> {ticket._id}</p>
           <p><strong>Customer Name:</strong> {ticket.customer.name}</p>
           <p><strong>Subject:</strong> {ticket.title}</p>
-          <p><strong>Priority:</strong> {ticket.priority}</p>
           <p><strong>Status:</strong> {ticket.status}</p>
           <p><strong>Description:</strong> {ticket.description}</p>
-          <p><strong>Date Created:</strong> {ticket.createdAt}</p>
+          <p><strong>Date Created:</strong>{new Date(ticket.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                })}</p>
           
           {/* Attachments Section */}
           {ticket.attachments && ticket.attachments.length > 0 && (
@@ -68,17 +84,12 @@ const TicketModal = ({ ticket, onClose, onAction }) => {
             </div>
           )}
         </div>
-        <div className="modal-footer">
-          <button className="action-button" onClick={handleMarkAsResolved}>
-            Mark as Resolved
-          </button>
-          
+        <div className="modal-footer">         
           {/* Add margin class to the select element */}
           <select className="status-select" value={selectedStatus} onChange={handleStatusChange}>
             <option value="Open">Open</option>
             <option value="In Progress">In Progress</option>
             <option value="Resolved">Resolved</option>
-            <option value="Closed">Closed</option>
           </select>
   
           <button className="action-button" onClick={handleChangeStatus}>

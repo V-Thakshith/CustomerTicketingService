@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { UserContext } from "../UserContext";
 import api from '../api';
-
+ 
 const Login = () => {
-    
+   
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
@@ -14,7 +14,7 @@ const Login = () => {
     const { user, setUser } = useContext(UserContext);
     setUser(null);
     sessionStorage.clear();
-
+ 
     const [signupData, setSignupData] = useState({
         fullName: '',
         signupEmail: '',
@@ -25,28 +25,25 @@ const Login = () => {
         country: '',
         role: 'customer'
     });
-
+ 
     const navigate = useNavigate();
-
+ 
     const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);
-
+ 
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            // Reset user context and session storage before login
-            
-
             if (!validateEmail(email)) {
-                setErrorMessage('Please enter a valid email address.');
+                alert('Please enter a valid email address.');
                 return;
             }
-
+ 
             const { data } = await api.post('/auth/login', { email, password });
-
+ 
             console.log(data.user, data.token);
             sessionStorage.setItem('token', data.token);
             setUser(data.user);
-
+ 
             if (isAgent && data.user.role === 'agent') {
                 navigate('/dashboardAgent');
             } else if (!isAgent && data.user.role === 'customer') {
@@ -59,9 +56,31 @@ const Login = () => {
             alert("Login Failed");
         }
     };
-
+ 
     const handleSignUp = async (e) => {
         e.preventDefault();
+       
+        // Name validation: At least 3 letters
+        if (signupData.fullName.length < 3) {
+            alert('Full name must be at least 3 characters long.');
+            return;
+        }
+ 
+        // Date validation: Age should be at least 18 years
+        const today = new Date();
+        const birthDate = new Date(signupData.dob);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDifference = today.getMonth() - birthDate.getMonth();
+ 
+        if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+ 
+        if (age < 18) {
+            alert('You must be at least 18 years old to register.');
+            return;
+        }
+ 
         try {
             const validatePassword = (pwd) => {
                 if (pwd.length < 8) return 'Password must be at least 8 characters long';
@@ -71,27 +90,27 @@ const Login = () => {
                 if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) return 'Password must contain at least one special character';
                 return '';
             };
-
+ 
             if (!validateEmail(signupData.signupEmail)) {
-                setErrorMessage('Please enter a valid email address.');
+                alert('Please enter a valid email address.');
                 return;
             }
-
+ 
             const passwordError = validatePassword(signupData.signupPassword);
             if (passwordError) {
-                setErrorMessage(passwordError);
+                alert(passwordError);
                 return;
             }
-
+ 
             if (signupData.signupPassword !== signupData.confirmPassword) {
-                setErrorMessage('Passwords do not match.');
+                alert('Passwords do not match.');
                 return;
             }
-
+ 
             console.log('Pre Sign Up Data:', signupData);
             const { data } = await api.post('/auth/register', signupData);
             console.log('Sign Up Data:', signupData, data);
-
+ 
             alert('Sign-up successful!');
             setShowPopup(false); // Close the pop-up after sign-up
         } catch (e) {
@@ -99,7 +118,7 @@ const Login = () => {
             alert("Something went wrong");
         }
     };
-
+ 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setSignupData({
@@ -107,7 +126,7 @@ const Login = () => {
             [name]: value
         });
     };
-
+ 
     return (
         <div className="login-container">
             <div className="side-panel">
@@ -116,9 +135,9 @@ const Login = () => {
             </div>
             <form className="login-form" onSubmit={handleLogin}>
                 <h2>Login to TelecomCo</h2>
-
+ 
                 {errorMessage && <p className="error-message">{errorMessage}</p>}
-
+ 
                 <div className="input-group">
                     <label htmlFor="email">Email Address</label>
                     <input
@@ -139,7 +158,7 @@ const Login = () => {
                         required
                     />
                 </div>
-
+ 
                 <div className="input-group-inline">
                     <input
                         type="checkbox"
@@ -148,18 +167,18 @@ const Login = () => {
                     />
                     <label>I am an agent</label>
                 </div>
-
+ 
                 <button type="submit" className="login-button">Login</button>
-
+ 
                 <p className="forgot-password">
                     <a href="#forgot-password">Forgot Password?</a>
                 </p>
-
+ 
                 <div className="sign-up-link">
                     <a href="#signup" onClick={() => setShowPopup(true)}>Sign Up</a>
                 </div>
             </form>
-
+ 
             {showPopup && (
                 <>
                     <div className="overlay" onClick={() => setShowPopup(false)}></div>
@@ -247,7 +266,7 @@ const Login = () => {
                                     required
                                 />
                             </div>
-
+ 
                             <button type="submit" className="register-button">Register</button>
                         </form>
                     </div>
@@ -256,5 +275,5 @@ const Login = () => {
         </div>
     );
 };
-
+ 
 export default Login;

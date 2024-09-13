@@ -21,28 +21,29 @@ const Dashboard = () => {
     const { user, ready } = useContext(UserContext);
     const navigate = useNavigate();
 
+    // Define fetchTickets function here
+    const fetchTickets = async () => {
+        if (!ready) return;
+
+        if (!user) {
+            navigate('/');
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await api.get(`/tickets/customer/${user._id}`);
+            setTickets(response.data);
+        } catch (error) {
+            setError('Error fetching tickets.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchTickets = async () => {
-            if (!ready) return;
-
-            if (!user) {
-                navigate('/');
-                return;
-            }
-
-            setLoading(true);
-            setError(null);
-
-            try {
-                const response = await api.get(`/tickets/customer/${user._id}`);
-                setTickets(response.data);
-            } catch (error) {
-                setError('Error fetching tickets.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchTickets();
     }, [ready, user, navigate]);
 
@@ -95,6 +96,7 @@ const Dashboard = () => {
                     'Content-Type': 'multipart/form-data'
                 }
             });
+            fetchTickets(); // Call fetchTickets here
             closePopup();
         } catch (error) {
             console.error('Error submitting ticket:', error);
@@ -183,7 +185,11 @@ const Dashboard = () => {
                                     <td>{ticket.status}</td>
                                     <td>{ticket.agent.name}</td>
                                     <td>{ticket.agent.email}</td>
-                                    <td>{ticket.createdAt}</td>
+                                    <td>{new Date(ticket.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                })}</td>
                                 </tr>
                             ))
                         ) : (

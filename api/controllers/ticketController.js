@@ -1,6 +1,5 @@
 const Ticket = require('../models/Ticket');
 const User = require('../models/User');
-const mongoose = require('mongoose');
 //const { sendSms } = require('../services/twilioService');
 const { sendEmail } = require('../services/emailService');
 
@@ -33,18 +32,53 @@ exports.updateTicketStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    console.log(status)
-    const ticket = await Ticket.findByIdAndUpdate(id, { status }, { new: true });
-    if (!ticket) return res.status(404).json({ msg: 'Ticket not found' });
 
+    // Validate status is provided
+    if (!status) {
+      return res.status(400).json({ msg: 'Status is required' });
+    }
+
+    // Find the ticket by ID
+    const ticket = await Ticket.findById(id);
+    if (!ticket) {
+      console.log("40404040")
+      return res.status(404).json({ msg: 'Ticket not found' });
+    }
+
+    // Determine current status and validate transition
+    const currentStatus = ticket.status;
+    let validStatus = false;
+    console.log(currentStatus,status)
+    if (currentStatus === 'Open') {
+      if (status === 'In Progress' || status === 'Resolved') {
+        validStatus = true;
+      }
+    } else if (currentStatus === 'In Progress') {
+      if (status === 'Resolved') {
+        validStatus = true;
+      }
+    } else if (currentStatus === 'Resolved') {
+      validStatus = false;
+    }
+
+    if (!validStatus) {
+      return res.status(400).json({ msg: 'Invalid status transition' });
+    }
+
+    // Update the ticket status
+    ticket.status = status;
+    const updatedTicket = await ticket.save();
+
+    // Notify the customer
     const message = `Your ticket with ID ${id} has been updated to ${status}.`;
     await notifyCustomer(id, message);
 
-    res.status(200).json({ msg: 'Ticket status updated', ticket });
+    res.status(200).json({ msg: 'Ticket status updated', ticket: updatedTicket });
   } catch (error) {
     res.status(500).json({ msg: 'Server error', error });
   }
 };
+
 
 exports.updateTicketStatusToResolved = async (req, res) => {
   try {
@@ -80,7 +114,7 @@ exports.createTicket = async (req, res) => {
         month: 'long',
         day: 'numeric'
       });
-  
+      console.log(readableDate)
       // Create the ticket
       const newTicket = new Ticket({
         title,

@@ -42,22 +42,6 @@ const AgentDashboard = () => {
 
     setLoading(true);
     setError(null);
-    const fetchTickets = async () => {
-      try {
-        const response = await api.get(`/tickets/assigned/${user._id}`); // Adjust endpoint as needed
-        const sortedTickets = response.data.sort((a, b) => {
-          if (a.category === b.category) return 0;
-          return (categoryOrder[a.category] || 999) - (categoryOrder[b.category] || 999);
-        });
-        setTickets(sortedTickets);
-      } catch (error) {
-        setError('Error fetching tickets.');
-        console.error('Error fetching tickets:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTickets();
   }, [user, ready, navigate]);
 
@@ -65,18 +49,35 @@ const AgentDashboard = () => {
     setSelectedCategory(e.target.value);
   };
 
+  const fetchTickets = async () => {
+    try {
+      const response = await api.get(`/tickets/assigned/${user._id}`); // Adjust endpoint as needed
+      const sortedTickets = response.data.sort((a, b) => {
+        if (a.category === b.category) return 0;
+        return (categoryOrder[a.category] || 999) - (categoryOrder[b.category] || 999);
+      });
+      setTickets(sortedTickets);
+    } catch (error) {
+      setError('Error fetching tickets.');
+      console.error('Error fetching tickets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
   const handleViewTicket = (ticket) => {
-    setSelectedTicket(ticket); // Set the selected ticket
-    setShowModal(true); // Show the modal
+    setSelectedTicket(ticket); 
+    setShowModal(true); 
   };
  
   const handleCloseModal = () => {
-    setShowModal(false); // Close the modal
-    setSelectedTicket(null); // Reset selected ticket
+    fetchTickets();
+    setShowModal(false); 
+    setSelectedTicket(null); 
   };
  
   const handleTicketAction = (action) => {
@@ -185,7 +186,11 @@ const AgentDashboard = () => {
                       <td>{ticket.title}</td>
                       <td>{ticket.category}</td>
                       <td>{ticket.status}</td>
-                      <td>{ticket.createdAt}</td>
+                      <td>{new Date(ticket.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                })}</td>
                       <td><button className="view-link" onClick={() => handleViewTicket(ticket)}>View</button></td> {/* New view link */}
                     </tr>
                   ))
