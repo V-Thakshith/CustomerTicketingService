@@ -11,6 +11,7 @@ const Login = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [showPopup, setShowPopup] = useState(false);
     const [isAgent, setIsAgent] = useState(false);
+    const [isManager, setIsManager] = useState(false);
     const { user, setUser } = useContext(UserContext);
     setUser(null);
     sessionStorage.clear();
@@ -37,14 +38,16 @@ const Login = () => {
                 alert('Please enter a valid email address.');
                 return;
             }
- 
+   
             const { data } = await api.post('/auth/login', { email, password });
- 
+   
             console.log(data.user, data.token);
             sessionStorage.setItem('token', data.token);
             setUser(data.user);
- 
-            if (isAgent && data.user.role === 'agent') {
+   
+            if (isManager && data.user.role === 'manager') {
+                navigate('/managerDashboard');
+            } else if (isAgent && data.user.role === 'agent') {
                 navigate('/dashboardAgent');
             } else if (!isAgent && data.user.role === 'customer') {
                 navigate('/dashboard');
@@ -56,6 +59,7 @@ const Login = () => {
             alert("Login Failed");
         }
     };
+   
  
     const handleSignUp = async (e) => {
         e.preventDefault();
@@ -166,6 +170,14 @@ const Login = () => {
                         onChange={() => setIsAgent(!isAgent)}
                     />
                     <label>I am an agent</label>
+                </div>
+                <div className="input-group-inline">
+                    <input
+                        type="checkbox"
+                        checked={isManager}
+                        onChange={() => setIsManager(!isManager)}
+                    />
+                    <label>I am a manager</label>
                 </div>
  
                 <button type="submit" className="login-button">Login</button>

@@ -5,7 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const roleMiddleware = require('../middleware/roleMiddleware');
 
 router.post('/register', authController.registerUser);
-router.post('/registerAgent', authMiddleware,roleMiddleware(['manager']),authController.registerUser);
+router.post('/registerAgent', authMiddleware,authController.registerUser);
 router.post('/registerManager', authMiddleware,roleMiddleware(['manager']),authController.registerUser);
 router.post('/login', authController.loginUser);
 
