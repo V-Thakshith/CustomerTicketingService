@@ -4,9 +4,16 @@ const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
 const roleMiddleware = require('../middleware/roleMiddleware');
 
-router.post('/register', authController.registerUser);
-router.post('/registerManager', authMiddleware, roleMiddleware(['manager']), authController.registerUser);
-router.post('/registerAgent', authMiddleware, authController.registerUser); // New route for registering agents
+// Customer registration
+router.post('/register', authController.registerCustomer);
+
+// Agent registration (restricted to manager)
+router.post('/registerAgent', authMiddleware, authController.registerAgent);
+
+// Manager registration (restricted to manager)
+router.post('/registerManager', authMiddleware, roleMiddleware(['manager']), authController.registerManager);
+
+// Login route (same for all roles)
 router.post('/login', authController.loginUser);
 
 module.exports = router;

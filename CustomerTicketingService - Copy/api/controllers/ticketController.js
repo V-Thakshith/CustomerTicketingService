@@ -1,3 +1,4 @@
+const Agent = require('../models/Agent');
 const Ticket = require('../models/Ticket');
 const User = require('../models/User');
 //const { sendSms } = require('../services/twilioService');
@@ -41,24 +42,16 @@ exports.updateTicketStatus = async (req, res) => {
     // Find the ticket by ID
     const ticket = await Ticket.findById(id);
     if (!ticket) {
-      console.log("40404040")
       return res.status(404).json({ msg: 'Ticket not found' });
     }
 
     // Determine current status and validate transition
     const currentStatus = ticket.status;
     let validStatus = false;
-    console.log(currentStatus,status)
     if (currentStatus === 'Open') {
-      if (status === 'In Progress' || status === 'Resolved') {
-        validStatus = true;
-      }
+      validStatus = status === 'In Progress' || status === 'Resolved';
     } else if (currentStatus === 'In Progress') {
-      if (status === 'Resolved') {
-        validStatus = true;
-      }
-    } else if (currentStatus === 'Resolved') {
-      validStatus = false;
+      validStatus = status === 'Resolved';
     }
 
     if (!validStatus) {
@@ -69,12 +62,40 @@ exports.updateTicketStatus = async (req, res) => {
     ticket.status = status;
     const updatedTicket = await ticket.save();
 
+    // Retrieve the agent assigned to the ticket
+    const agent = await User.findById(ticket.assignedTo).exec();
+    if (!agent) {
+      return res.status(404).json({ msg: 'Agent not found' });
+    }
+
+    // Create updates for the agent
+    const updateAgent = { $inc: { ticketCount: 0 } };
+    if (currentStatus === "Open") {
+      updateAgent.$inc.ticketOpen = -1;
+    } else if (currentStatus === "In Progress") {
+      updateAgent.$inc.ticketInProgress = -1;
+    } else if (currentStatus === "Resolved") {
+      updateAgent.$inc.ticketResolved = -1;
+    }
+
+    if (status === "Open") {
+      updateAgent.$inc.ticketOpen = 1;
+    } else if (status === "In Progress") {
+      updateAgent.$inc.ticketInProgress = 1;
+    } else if (status === "Resolved") {
+      updateAgent.$inc.ticketResolved = 1;
+    }
+
+    // Update the agent counts
+    await Agent.findByIdAndUpdate(ticket.assignedTo, updateAgent).exec();
+
     // Notify the customer
     const message = `Your ticket with ID ${id} has been updated to ${status}.`;
     await notifyCustomer(id, message);
 
     res.status(200).json({ msg: 'Ticket status updated', ticket: updatedTicket });
   } catch (error) {
+    console.error('Error updating ticket status:', error);
     res.status(500).json({ msg: 'Server error', error });
   }
 };
@@ -105,18 +126,43 @@ exports.reassignTicket = async (req, res) => {
 
     // Find the ticket by ID
     const ticket = await Ticket.findById(id);
+    const oldAgentID= ticket.assignedTo;
     if (!ticket) {
       return res.status(404).json({ msg: 'Ticket not found' });
     }
 
-    // Check if the new agent exists and is an agent
-    const newAgent = await User.findById(newAgentId);
-    if (!newAgent || newAgent.role !== 'agent') {
-      return res.status(400).json({ msg: 'Invalid agent' });
-    }
-
     // Reassign the ticket to the new agent
-    ticket.assignedTo = newAgentId;
+    const [newAgent, oldAgent] = await Promise.all([
+      Agent.findById(newAgentId).exec(),
+      Agent.findById(oldAgentID).exec()
+    ]);
+  
+    if (!newAgent || !oldAgent) {
+      throw new Error('One or both agents not found');
+    }
+  
+    // Create update objects
+    const updateNewAgent = { $inc: { ticketCount: 1 } };
+    const updateOldAgent = { $inc: { ticketCount: -1 } };
+  
+    // Update status-specific counts
+    if (ticketStatus === "Open") {
+      updateNewAgent.$inc.ticketOpen = 1;
+      updateOldAgent.$inc.ticketOpen = -1;
+    } else if (ticketStatus === "In Progress") {
+      updateNewAgent.$inc.ticketInProgress = 1;
+      updateOldAgent.$inc.ticketInProgress = -1;
+    } else if (ticketStatus === "Resolved") {
+      updateNewAgent.$inc.ticketResolved = 1;
+      updateOldAgent.$inc.ticketResolved = -1;
+    }
+  
+    // Perform batch update
+    await Promise.all([
+      Agent.findByIdAndUpdate(newAgentId, updateNewAgent).exec(),
+      Agent.findByIdAndUpdate(oldAgentID, updateOldAgent).exec()
+    ]);
+    
     const updatedTicket = await ticket.save();
 
     // Notify the customer about reassignment (optional)
@@ -174,6 +220,8 @@ exports.createTicket = async (req, res) => {
       if (unassignedAgents.length > 0) {
         // Assign the ticket to an unassigned agent
         newTicket.assignedTo = unassignedAgents[0]._id;
+        await Agent.findByIdAndUpdate(unassignedAgents[0]._id, { $inc: { ticketCount: 1 } }).exec();
+        await Agent.findByIdAndUpdate(leastBusyAgent._id, { $inc: { ticketOpen: 1 } }).exec();
         await newTicket.save();
         return res.status(201).json({ msg: 'Ticket created and assigned to an unassigned agent', ticket: newTicket });
       }
@@ -196,7 +244,11 @@ exports.createTicket = async (req, res) => {
   
       // Assign the ticket to the least busy agent
       newTicket.assignedTo = leastBusyAgent._id;
+      await Agent.findByIdAndUpdate(leastBusyAgent._id, { $inc: { ticketCount: 1 } }).exec();
+      await Agent.findByIdAndUpdate(leastBusyAgent._id, { $inc: { ticketOpen: 1 } }).exec();
       await newTicket.save();
+
+
   
       res.status(201).json({ msg: 'Ticket created and assigned', ticket: newTicket });
     } catch (error) {

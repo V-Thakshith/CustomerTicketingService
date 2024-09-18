@@ -22,6 +22,26 @@ const getAllAgentsDetails = async (req, res) => {
   }
 };
 
+const removeAgent = async (req, res) => {
+  const { agentId } = req.params;
+
+  try {
+    // Find and remove the agent
+    const agent = await Agent.findById(agentId);
+
+    if (!agent) {
+      return res.status(404).json({ msg: 'Agent not found' });
+    }
+
+    // Remove agent from the database
+    await agent.remove();
+    res.status(200).json({ msg: 'Agent removed successfully' });
+  } catch (error) {
+    res.status(500).json({ msg: 'Server error', error });
+  }
+};
+
 module.exports = {
-  getAllAgentsDetails, 
+  getAllAgentsDetails,
+  removeAgent
 };
